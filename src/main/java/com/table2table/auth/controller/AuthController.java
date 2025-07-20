@@ -4,11 +4,11 @@ import com.table2table.auth.dto.JwtResponseDto;
 import com.table2table.auth.dto.LoginRequestDto;
 import com.table2table.auth.dto.RegisterRequestDto;
 import com.table2table.auth.dto.UserResponseDto;
-import com.table2table.auth.entity.User;
+import com.table2table.auth.entity.UserCred;
 import com.table2table.auth.repository.UserRepository;
 import com.table2table.auth.security.JwtService;
 import com.table2table.auth.service.UserService;
-import com.table2table.auth.util.UserManagementUtil;
+import com.table2table.auth.util.UserCredUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -58,19 +58,19 @@ public class AuthController {
 
         //String token = jwtService.generateToken(loginRequest.getEmail());
 
-        User user = userRepository.findByEmail(loginRequestDto.getEmail()).orElseThrow();
+        UserCred userCred = userRepository.findByEmail(loginRequestDto.getEmail()).orElseThrow();
 
-        String token = jwtService.generateToken(user);
+        String token = jwtService.generateToken(userCred);
 
-        return ResponseEntity.ok(new JwtResponseDto(token, user.getEmail(), user.getRole()));
+        return ResponseEntity.ok(new JwtResponseDto(token, userCred.getEmail(), userCred.getRole()));
     }
 
     @GetMapping("/profile")
     public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
         // Fetch user from database using email
-        User user = userRepository.findByEmail(userDetails.getUsername())
+        UserCred userCred = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        UserResponseDto userResponse = UserManagementUtil.convertToDto(user);
+        UserResponseDto userResponse = UserCredUtil.convertToDto(userCred);
 
         return ResponseEntity.ok(userResponse);
     }

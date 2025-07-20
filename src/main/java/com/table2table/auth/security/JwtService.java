@@ -1,7 +1,7 @@
 package com.table2table.auth.security;
 
 
-import com.table2table.auth.entity.User;
+import com.table2table.auth.entity.UserCred;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,11 +25,11 @@ public class JwtService {
     }
 
     // === Generate JWT Token with email & role ===
-    public String generateToken(User user) {
+    public String generateToken(UserCred userCred) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role", user.getRole()); // ✅ Embed role
-        claims.put("userId", user.getId()); // ✅ Embed Id
-        return buildToken(claims, user.getEmail());
+        claims.put("role", userCred.getRole()); // ✅ Embed role
+        claims.put("userId", userCred.getCredId()); // ✅ Embed Id
+        return buildToken(claims, userCred.getEmail());
     }
 
     // === Build Token Internally ===

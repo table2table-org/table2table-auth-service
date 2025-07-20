@@ -4,26 +4,24 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.List;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @Entity
-@Table(name = "users")
-public class User {
+@Table(name = "user_cred")
+public class UserCred {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long credId;
 
     private String name;
     private String email;
     private String password;
-    private String phone;
-    private String flatNumber;
-    private String floor;
     private String role;  // COOK, CUSTOMER, ADMIN
 
-    private Long communityId;
+    private LocalDateTime createdOn;
+    private boolean isLocked;
 }
 
