@@ -1,19 +1,19 @@
 package com.table2table.auth.service;
 
-
 import com.table2table.auth.dto.CustomUserDetailsDto;
 import com.table2table.auth.entity.UserCred;
 import com.table2table.auth.repository.UserRepository;
+import com.table2table.security.service.IUserDetailsService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class CustomUserDetailsService implements UserDetailsService {
+public class UserDetailsServiceImpl implements IUserDetailsService {
 
-    private final UserRepository userRepository; // Or UserService if you prefer
+    private final UserRepository userRepository;
 
     @Override
     public CustomUserDetailsDto loadUserByUsername(String email) throws UsernameNotFoundException {
