@@ -6,9 +6,9 @@ import com.table2table.auth.dto.RegisterRequestDto;
 import com.table2table.auth.dto.UserResponseDto;
 import com.table2table.auth.entity.UserCred;
 import com.table2table.auth.repository.UserRepository;
-import com.table2table.auth.security.JwtService;
 import com.table2table.auth.service.UserService;
 import com.table2table.auth.util.UserCredUtil;
+import com.table2table.security.service.JwtService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -60,7 +60,7 @@ public class AuthController {
 
         UserCred userCred = userRepository.findByEmail(loginRequestDto.getEmail()).orElseThrow();
 
-        String token = jwtService.generateToken(userCred);
+        String token = jwtService.generateToken(userCred.getRole(),userCred.getCredId(),userCred.getEmail());
 
         return ResponseEntity.ok(new JwtResponseDto(token, userCred.getEmail(), userCred.getRole()));
     }
