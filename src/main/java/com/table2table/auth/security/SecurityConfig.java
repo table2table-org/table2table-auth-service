@@ -1,6 +1,7 @@
 package com.table2table.auth.security;
 
 import com.table2table.auth.repository.UserRepository;
+import com.table2table.auth.service.UserDetailsServiceImpl;
 import com.table2table.security.config.CommonSecurityBeans;
 import com.table2table.security.filter.JwtAuthFilter;
 import com.table2table.security.service.IUserDetailsService;
@@ -33,7 +34,7 @@ public class SecurityConfig {
 
     private final UserRepository userRepository;
 
-    private final IUserDetailsService customUserDetailsService;
+    private final UserDetailsServiceImpl customUserDetailsService;
 
     private final CommonSecurityBeans commonSecurityBeans;
 
