@@ -17,22 +17,25 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
+    private final WebClient.Builder webClientBuilder;
     private final AuthenticationManager authenticationManager;
     private final UserService userService;
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
     public AuthController(
-            AuthenticationManager authenticationManager,
+            WebClient.Builder webClientBuilder, AuthenticationManager authenticationManager,
             UserService userService,
             JwtService jwtService,
             UserRepository userRepository
     ) {
+        this.webClientBuilder = webClientBuilder;
         this.authenticationManager = authenticationManager;
         this.userService = userService;
         this.jwtService = jwtService;
@@ -68,11 +71,14 @@ public class AuthController {
     @GetMapping("/profile")
     public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
         // Fetch user from database using email
-        UserCred userCred = userRepository.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        UserResponseDto userResponse = UserCredUtil.convertToDto(userCred);
-
-        return ResponseEntity.ok(userResponse);
+        String userServiceUrl = "http://user-service/api/users/getUserByEmail/";
+        UserResponseDto userDetailsResons =  webClientBuilder.build()
+                .get()
+                .uri(userServiceUrl + "{email}", userDetails.getUsername())
+                .retrieve()
+                .bodyToMono(UserResponseDto.class)
+                .block();
+        return ResponseEntity.ok(userDetailsResons);
     }
 }
 
