@@ -1,21 +1,24 @@
 # Stage 1: The Builder
-# Use a specific Maven and JDK version for reproducible builds.
 FROM maven:3.9-eclipse-temurin-17 AS builder
+
+# Accept build args for GitHub authentication
+ARG GITHUB_USER
+ARG GITHUB_TOKEN
+
+# Expose them as environment variables for Maven
+ENV GITHUB_USER=${GITHUB_USER}
+ENV GITHUB_TOKEN=${GITHUB_TOKEN}
 
 WORKDIR /app
 
-# Copy only the files needed to download dependencies.
-# This optimizes Docker's layer caching.
+# Copy only the files needed to download dependencies for layer caching
 COPY .mvn .mvn
 COPY mvnw pom.xml ./
 
-# --- FIX ---
-# Add execute permissions to the Maven wrapper script.
+# Make Maven wrapper executable
 RUN chmod +x ./mvnw
 
-# --- SOLUTION 4: Decode base64 secret inside Docker ---
-# Mount the base64-encoded secret and decode it within the container
-# This avoids any encoding/decoding issues in GitHub Actions
+# Mount and decode Maven settings in-container
 RUN --mount=type=secret,id=maven-settings \
     mkdir -p /root/.m2 && \
     cat /run/secrets/maven-settings | base64 -d > /root/.m2/settings.xml && \
@@ -24,40 +27,30 @@ RUN --mount=type=secret,id=maven-settings \
 # Copy the rest of the source code
 COPY src ./src
 
-# Mount the secret again and decode for the build step
+# Build the package skipping tests
 RUN --mount=type=secret,id=maven-settings \
     cat /run/secrets/maven-settings | base64 -d > /root/.m2/settings.xml && \
     ./mvnw clean package -DskipTests -B
 
 # Stage 2: The Runtime Image
-# Use a slim, official OpenJDK image for a smaller and more secure final image.
 FROM openjdk:17-jdk-slim
 
 ENV SPRING_PROFILES_ACTIVE=dev
-
 LABEL version="dev"
 LABEL description="Table2Table Auth Service - Development build"
 
-# Create a dedicated, non-root user for security.
-RUN groupadd -g 1001 appuser && \
-    useradd -u 1001 -g appuser -m appuser
-
+# Create non-root user
+RUN groupadd -g 1001 appuser && useradd -u 1001 -g appuser -m appuser
 WORKDIR /app
 
-# Copy only the final JAR from the builder stage.
+# Copy built JAR and set ownership
 COPY --from=builder /app/target/*.jar app.jar
-
-# Set the correct ownership for the application file.
 RUN chown appuser:appuser app.jar
-
-# Switch to the non-root user.
 USER appuser
 
-# --- FIX ---
-# Expose the internal port the Spring Boot application listens on.
+# Expose port and healthcheck
 EXPOSE 8080
-
-# --- FIX ---
-# The healthcheck must use the internal container port (8080).
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
