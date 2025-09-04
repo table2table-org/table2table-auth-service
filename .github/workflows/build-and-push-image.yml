@@ -8,6 +8,7 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
@@ -26,16 +27,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- THIS IS THE FIX ---
-      # Use printf instead of echo for a more reliable decode without extra characters.
-      - name: Decode Maven Settings
-        run: printf "%s" "${{ secrets.MAVEN_SETTINGS }}" | base64 --decode > ${{ runner.temp }}/settings.xml
-
+      # --- SOLUTION 4: Direct secret mounting ---
+      # Pass the base64-encoded secret directly to Docker
+      # Docker will handle the decoding internally
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.dev
-          secrets: maven-settings=${{ runner.temp }}/settings.xml
+          secrets: |
+            maven-settings=${{ secrets.MAVEN_SETTINGS }}
           push: true
           tags: ghcr.io/table2table-org/auth-service:${{ github.sha }}
