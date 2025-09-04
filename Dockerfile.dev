@@ -1,0 +1,58 @@
+# Stage 1: The Builder
+# Use a specific Maven and JDK version for reproducible builds.
+FROM maven:3.9-eclipse-temurin-17 AS builder
+
+WORKDIR /app
+
+# Copy only the files needed to download dependencies.
+# This optimizes Docker's layer caching.
+COPY .mvn .mvn
+COPY mvnw pom.xml ./
+
+# --- FIX ---
+# Mount the secret settings.xml to authenticate and download dependencies.
+RUN --mount=type=secret,id=maven-settings,target=/root/.m2/settings.xml \
+    ./mvnw dependency:go-offline -B
+
+# Copy the rest of the source code
+COPY src ./src
+
+# --- FIX ---
+# Mount the secret again to build the final package.
+# Skipping tests is a best practice for faster, more reliable image builds.
+RUN --mount=type=secret,id=maven-settings,target=/root/.m2/settings.xml \
+    ./mvnw clean package -DskipTests -B
+
+
+# Stage 2: The Runtime Image
+# Use a slim, official OpenJDK image for a smaller and more secure final image.
+FROM openjdk:17-jdk-slim
+
+ENV SPRING_PROFILES_ACTIVE=dev
+
+LABEL version="dev"
+LABEL description="Table2Table Auth Service - Development build"
+
+# Create a dedicated, non-root user for security.
+RUN groupadd -g 1001 appuser && \
+    useradd -u 1001 -g appuser -m appuser
+
+WORKDIR /app
+
+# Copy only the final JAR from the builder stage.
+COPY --from=builder /app/target/*.jar app.jar
+
+# Set the correct ownership for the application file.
+RUN chown appuser:appuser app.jar
+
+# Switch to the non-root user.
+USER appuser
+
+# Expose the correct port for the auth-service.
+EXPOSE 8081
+
+# The healthcheck should use the internal container port (8080), not the published one.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8081/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
