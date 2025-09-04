@@ -33,8 +33,7 @@ jobs:
           context: .
           file: ./Dockerfile.dev
           # Pass the settings.xml as a build secret
-          secrets: |
-            "maven-settings=${{ secrets.MAVEN_SETTINGS }}"
+          secrets: maven-settings=${{ secrets.MAVEN_SETTINGS }}
           push: true
           # Create a unique, traceable tag for the image based on the commit SHA
           tags: ghcr.io/table2table-org/auth-service:${{ github.sha }}
