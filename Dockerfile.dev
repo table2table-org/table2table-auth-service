@@ -13,18 +13,21 @@ COPY mvnw pom.xml ./
 # Add execute permissions to the Maven wrapper script.
 RUN chmod +x ./mvnw
 
-# Mount the secret settings.xml to authenticate and download dependencies.
-RUN --mount=type=secret,id=maven-settings,target=/root/.m2/settings.xml \
+# --- SOLUTION 4: Decode base64 secret inside Docker ---
+# Mount the base64-encoded secret and decode it within the container
+# This avoids any encoding/decoding issues in GitHub Actions
+RUN --mount=type=secret,id=maven-settings \
+    mkdir -p /root/.m2 && \
+    cat /run/secrets/maven-settings | base64 -d > /root/.m2/settings.xml && \
     ./mvnw dependency:go-offline -B
 
 # Copy the rest of the source code
 COPY src ./src
 
-# Mount the secret again to build the final package.
-# Skipping tests is a best practice for faster, more reliable image builds.
-RUN --mount=type=secret,id=maven-settings,target=/root/.m2/settings.xml \
+# Mount the secret again and decode for the build step
+RUN --mount=type=secret,id=maven-settings \
+    cat /run/secrets/maven-settings | base64 -d > /root/.m2/settings.xml && \
     ./mvnw clean package -DskipTests -B
-
 
 # Stage 2: The Runtime Image
 # Use a slim, official OpenJDK image for a smaller and more secure final image.
@@ -57,6 +60,4 @@ EXPOSE 8080
 # --- FIX ---
 # The healthcheck must use the internal container port (8080).
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/actuator/health || exit 1
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+    CMD curl
