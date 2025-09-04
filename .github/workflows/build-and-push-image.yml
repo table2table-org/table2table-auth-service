@@ -27,17 +27,15 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # --- THIS IS THE FIX ---
-      # Step 1: Decode the MAVEN_SETTINGS secret from Base64 into a temporary file.
+      # Use printf instead of echo for a more reliable decode without extra characters.
       - name: Decode Maven Settings
-        run: echo "${{ secrets.MAVEN_SETTINGS }}" | base64 --decode > ${{ runner.temp }}/settings.xml
+        run: printf "%s" "${{ secrets.MAVEN_SETTINGS }}" | base64 --decode > ${{ runner.temp }}/settings.xml
 
-      # Step 2: Build the image, pointing the secret to the temporary file.
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.dev
-          # This now securely points to the decoded settings.xml file.
           secrets: maven-settings=${{ runner.temp }}/settings.xml
           push: true
           tags: ghcr.io/table2table-org/auth-service:${{ github.sha }}
