@@ -10,6 +10,9 @@ COPY .mvn .mvn
 COPY mvnw pom.xml ./
 
 # --- FIX ---
+# Add execute permissions to the Maven wrapper script.
+RUN chmod +x ./mvnw
+
 # Mount the secret settings.xml to authenticate and download dependencies.
 RUN --mount=type=secret,id=maven-settings,target=/root/.m2/settings.xml \
     ./mvnw dependency:go-offline -B
@@ -17,7 +20,6 @@ RUN --mount=type=secret,id=maven-settings,target=/root/.m2/settings.xml \
 # Copy the rest of the source code
 COPY src ./src
 
-# --- FIX ---
 # Mount the secret again to build the final package.
 # Skipping tests is a best practice for faster, more reliable image builds.
 RUN --mount=type=secret,id=maven-settings,target=/root/.m2/settings.xml \
@@ -48,11 +50,13 @@ RUN chown appuser:appuser app.jar
 # Switch to the non-root user.
 USER appuser
 
-# Expose the correct port for the auth-service.
-EXPOSE 8081
+# --- FIX ---
+# Expose the internal port the Spring Boot application listens on.
+EXPOSE 8080
 
-# The healthcheck should use the internal container port (8080), not the published one.
+# --- FIX ---
+# The healthcheck must use the internal container port (8080).
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8081/actuator/health || exit 1
+    CMD curl -f http://localhost:8080/actuator/health || exit 1
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
