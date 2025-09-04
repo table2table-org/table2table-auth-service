@@ -8,7 +8,6 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # Grant permissions for the workflow to read the repo and write packages
     permissions:
       contents: read
       packages: write
@@ -27,13 +26,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # --- THIS IS THE FIX ---
+      # Step 1: Decode the MAVEN_SETTINGS secret from Base64 into a temporary file.
+      - name: Decode Maven Settings
+        run: echo "${{ secrets.MAVEN_SETTINGS }}" | base64 --decode > ${{ runner.temp }}/settings.xml
+
+      # Step 2: Build the image, pointing the secret to the temporary file.
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile.dev
-          # Pass the settings.xml as a build secret
-          secrets: maven-settings=${{ secrets.MAVEN_SETTINGS }}
+          # This now securely points to the decoded settings.xml file.
+          secrets: maven-settings=${{ runner.temp }}/settings.xml
           push: true
-          # Create a unique, traceable tag for the image based on the commit SHA
           tags: ghcr.io/table2table-org/auth-service:${{ github.sha }}
